@@ -1,0 +1,142 @@
+# ==============================================================================
+# Vibe Engine — .gitignore
+# Stack: C++23 · CMake (presets) + Ninja · vcpkg (manifest) · MSVC / VS 2022
+#        DirectX 12 (Agility SDK) · HLSL SM 6.6+ via DXC · Tracy · Catch2
+#
+# Regra geral: versionar SÓ fonte (código, shaders HLSL, CMake, vcpkg.json,
+# presets, assets-fonte .gltf/.fbx/.png/.dds/.json, docs). Ignorar tudo que é
+# gerado por build, ferramenta, IDE ou SO.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Saída de build / diretórios gerados
+# ------------------------------------------------------------------------------
+Build/
+build/
+out/                      # diretório de build padrão do VS + CMake
+bin/
+lib/
+Bin/
+Lib/
+Binaries/
+Intermediate/
+cmake-build-*/            # diretórios de build do CLion / JetBrains
+[Dd]ebug/
+[Rr]elease/
+[Dd]evelopment/
+[Ss]hipping/
+x64/
+x86/
+Win32/
+
+# ------------------------------------------------------------------------------
+# CMake (arquivos gerados — vcpkg.json e CMakePresets.json SÃO versionados)
+# ------------------------------------------------------------------------------
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+compile_commands.json
+CMakeUserPresets.json     # presets locais do usuário (gerado pelo vcpkg/IDE)
+_deps/
+Testing/
+
+# ------------------------------------------------------------------------------
+# vcpkg (modo manifest — vcpkg.json + vcpkg-configuration.json são versionados)
+# ------------------------------------------------------------------------------
+vcpkg_installed/
+.vcpkg-root
+# Se você clonar o vcpkg PARA DENTRO do repo (./vcpkg) e NÃO como submódulo,
+# descomente a linha abaixo. Se usar submódulo git, mantenha-a comentada.
+# /vcpkg/
+
+# ------------------------------------------------------------------------------
+# Visual Studio 2022 / MSBuild
+# ------------------------------------------------------------------------------
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.user
+*.vcxproj.filters
+*.user
+*.suo
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.opendb
+ipch/
+[Oo]bj/
+enc_temp_folder/
+
+# ------------------------------------------------------------------------------
+# Artefatos de compilação C/C++ (MSVC)
+# ------------------------------------------------------------------------------
+*.obj
+*.o
+*.exe
+*.dll
+*.lib
+*.a
+*.exp
+*.pdb
+*.ilk
+*.idb
+*.iobj
+*.ipdb
+*.pch
+*.gch
+*.res
+*.tlog
+*.lastbuildstate
+*.unsuccessfulbuild
+*.log
+
+# ------------------------------------------------------------------------------
+# Shaders compilados / cache DXC (fontes .hlsl/.hlsli SÃO versionados)
+# ------------------------------------------------------------------------------
+*.dxil
+*.cso
+*.spv
+ShaderCache/
+DXILCache/
+ShaderPDB/
+*.shaderpdb
+
+# ------------------------------------------------------------------------------
+# Capturas de profiler / GPU debug (não versionar)
+# ------------------------------------------------------------------------------
+*.tracy                   # Tracy
+*.rdc                     # RenderDoc
+*.wpix                    # PIX on Windows
+*.nsight-cuprof-report
+PIXCaptures/
+Captures/
+
+# ------------------------------------------------------------------------------
+# Editores / IDEs
+# ------------------------------------------------------------------------------
+.vscode/                  # remova se quiser versionar tasks.json/launch.json compartilhados
+.idea/
+*.swp
+*.swo
+*~
+
+# ------------------------------------------------------------------------------
+# Claude Code — versionar .claude/skills e .claude/agents; ignorar locais
+# ------------------------------------------------------------------------------
+.claude/settings.local.json
+*.original.md             # backups gerados pelo caveman-compress
+
+# ------------------------------------------------------------------------------
+# Sistema operacional
+# ------------------------------------------------------------------------------
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+*.tmp
+*.bak
+*.cache
