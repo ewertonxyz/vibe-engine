@@ -3,6 +3,20 @@ cmake_minimum_required(VERSION 3.28)
 project(VibeEngine LANGUAGES CXX)
 
 # --------------------------------------------------------------------------
+# ADR 0008: as flags por preset (CMAKE_CXX_FLAGS / linker flags, em CMakePresets.json)
+# sao a UNICA fonte de verdade de otimizacao e runtime. A toolchain forca
+# CMAKE_BUILD_TYPE=Debug, o que faria o MSVC injetar /Od /Ob0 /RTC1 /MDd em TODOS os
+# presets (mascarado em debug, mas sobrescreve /O2 /MD em development/shipping -> D9025).
+# Neutralizamos os defaults por configuracao e a selecao automatica de runtime.
+foreach(VibeCfg DEBUG RELEASE RELWITHDEBINFO MINSIZEREL)
+    set(CMAKE_CXX_FLAGS_${VibeCfg} "" CACHE STRING "" FORCE)
+    set(CMAKE_C_FLAGS_${VibeCfg} "" CACHE STRING "" FORCE)
+    set(CMAKE_EXE_LINKER_FLAGS_${VibeCfg} "" CACHE STRING "" FORCE)
+    set(CMAKE_SHARED_LINKER_FLAGS_${VibeCfg} "" CACHE STRING "" FORCE)
+endforeach()
+set(CMAKE_MSVC_RUNTIME_LIBRARY "")
+
+# --------------------------------------------------------------------------
 # Flags MSVC comuns a todos os presets (ADR 0008).
 # As flags/defines POR PRESET vivem em CMakePresets.json; aqui ficam apenas
 # as que sao identicas em debug/development/shipping/asan-debug.
@@ -35,8 +49,7 @@ enable_testing()
 find_package(Catch2 3 CONFIG REQUIRED)
 
 # --------------------------------------------------------------------------
-# Modulos da engine entram a partir da T02 (core-types-handles-result):
-#   add_subdirectory(Engine/Source/Runtime/Core)
-#   ...
-# Nenhum add_subdirectory nesta task (apenas bootstrap de tooling).
+# Modulos da engine (T02+) e alvo de testes.
 # --------------------------------------------------------------------------
+add_subdirectory(Engine/Source/Runtime)
+add_subdirectory(Engine/Source/Tests)
