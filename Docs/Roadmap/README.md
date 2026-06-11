@@ -27,7 +27,7 @@ Fonte de verdade do escopo: [design-mvp.md](../design-mvp.md). Regras inegociáv
 |----|------|------|--------|--------------|
 | 01 | cmake-vcpkg-presets | Fase-01-foundation | Implementado | — |
 | 02 | core-types-handles-result | Fase-01-foundation | Implementado | 01 |
-| 03 | core-logging-time-profile | Fase-01-foundation | Planejado | 02 |
+| 03 | core-logging-time-profile | Fase-01-foundation | Implementado | 02 |
 
 ## Grafo de dependências entre tarefas
 
@@ -60,6 +60,7 @@ graph LR
 | 0013 | [Formato de task v2 — spec autossuficiente; Opus cria, Sonnet executa](../Decisions/0013-formato-task-v2.md) | Aceita |
 | 0014 | [Convenção de include paths — Public/<Module>/ e #include <Module/Foo.h>](../Decisions/0014-convencao-include-paths.md) | Aceita |
 | 0015 | [CMAKE_BUILD_TYPE por preset + neutralização de flags default do MSVC](../Decisions/0015-cmake-build-type-por-preset.md) | Aceita |
+| 0016 | [Agregação de fontes de teste do VibeTests por glob](../Decisions/0016-test-sources-glob.md) | Aceita |
 
 ## Pendências de governança
 
