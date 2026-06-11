@@ -25,7 +25,7 @@ Fonte de verdade do escopo: [design-mvp.md](../design-mvp.md). Regras inegociáv
 
 | ID | Nome | Fase | Status | Dependências |
 |----|------|------|--------|--------------|
-| 01 | cmake-vcpkg-presets | Fase-01-foundation | Planejado | — |
+| 01 | cmake-vcpkg-presets | Fase-01-foundation | Implementado | — |
 | 02 | core-types-handles-result | Fase-01-foundation | Planejado | 01 |
 | 03 | core-logging-time-profile | Fase-01-foundation | Planejado | 02 |
 

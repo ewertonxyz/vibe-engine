@@ -1,0 +1,21 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "vibe-engine",
+  "version-string": "0.1.0",
+  "dependencies": [
+    "glm",
+    "spdlog",
+    "catch2"
+  ],
+  "features": {
+    "tracy": {
+      "description": "Cliente Tracy para profiling (debug/development; ADR 0004, ADR 0008).",
+      "dependencies": [
+        {
+          "name": "tracy",
+          "default-features": false
+        }
+      ]
+    }
+  }
+}

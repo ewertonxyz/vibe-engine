@@ -20,6 +20,8 @@ Bin/
 Lib/
 Binaries/
 Intermediate/
+Saved/                    # saves / logs gerados em runtime
+.cache/                   # cache de ferramentas (clangd, ccache, etc.)
 cmake-build-*/            # diretórios de build do CLion / JetBrains
 [Dd]ebug/
 [Rr]elease/
