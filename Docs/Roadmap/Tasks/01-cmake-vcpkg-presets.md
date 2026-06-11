@@ -3,7 +3,7 @@ id: 01
 nome: cmake-vcpkg-presets
 fase: Fase-01-foundation
 formato: 2
-status: Planejado
+status: Implementado
 dependencies: []
 decisions: [0008]
 especialistas_consultados: [vx-spec-architecture, vx-spec-memory-perf, vx-spec-testing]
