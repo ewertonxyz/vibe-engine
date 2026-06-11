@@ -14,6 +14,7 @@
       "binaryDir": "${sourceDir}/Build/${presetName}",
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
         "VCPKG_MANIFEST_FEATURES": "tracy",
         "CMAKE_CXX_FLAGS": "/Od /RTC1 /MDd /JMC /Zi",
         "VIBE_DEFINES": "VIBE_BUILD_DEBUG=1;TRACY_ENABLE=1;VIBE_TESTING=1;VIBE_TRACKING_ALLOC=1;VIBE_ASSERTS=1;_ITERATOR_DEBUG_LEVEL=2"
@@ -27,6 +28,7 @@
       "binaryDir": "${sourceDir}/Build/${presetName}",
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
         "VCPKG_MANIFEST_FEATURES": "tracy",
         "CMAKE_CXX_FLAGS": "/O2 /Oi /Ot /Ob2 /MD /Zi",
         "CMAKE_EXE_LINKER_FLAGS": "/DEBUG:FULL",
@@ -42,6 +44,7 @@
       "binaryDir": "${sourceDir}/Build/${presetName}",
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_CXX_FLAGS": "/O2 /Oi /Ot /Ob3 /GL /Gy /GR- /MD",
         "CMAKE_EXE_LINKER_FLAGS": "/LTCG /OPT:REF /OPT:ICF",
         "CMAKE_SHARED_LINKER_FLAGS": "/LTCG /OPT:REF /OPT:ICF",
@@ -56,6 +59,7 @@
       "binaryDir": "${sourceDir}/Build/${presetName}",
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_CXX_FLAGS": "/Od /MDd /JMC /Zi /fsanitize=address",
         "CMAKE_EXE_LINKER_FLAGS": "/INCREMENTAL:NO",
         "CMAKE_SHARED_LINKER_FLAGS": "/INCREMENTAL:NO",

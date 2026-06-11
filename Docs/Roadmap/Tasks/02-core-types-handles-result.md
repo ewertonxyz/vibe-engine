@@ -3,7 +3,7 @@ id: 02
 nome: core-types-handles-result
 fase: Fase-01-foundation
 formato: 2
-status: Planejado
+status: Implementado
 dependencies: [01]
 decisions: [0001, 0008, 0009, 0014]
 especialistas_consultados: [vx-spec-architecture, vx-spec-memory-perf, vx-spec-testing]
@@ -233,7 +233,7 @@ Fonte: Fase-01 §Contratos entre tasks (T02). **Mudar qualquer assinatura = Prot
 11. Status Implementado → 12. Commit `[task 02] core: types, handle, result, stringid, assert`, push, PR.
 
 ## Desvios aprovados
-(vazio)
+- **Build-config (ADR 0015):** o build de `development` falhou com LNK2038 (`Catch2d.lib` debug `/MDd` vs objs `/MD`) porque os presets da T01 não definiam `CMAKE_BUILD_TYPE`, então o vcpkg linkava a variante errada e o MSVC injetava `/Od /MDd` em todo build (mascarado em debug, quebrava development). Resolução escolhida pelo usuário: corrigir na origem — adicionar `CMAKE_BUILD_TYPE` por preset em `CMakePresets.json` (debug/asan=Debug, development/shipping=Release) + neutralizar os flags default por configuração no `CMakeLists.txt` raiz. Arquivos fora do `files_modify` da T02 tocados **com autorização explícita do usuário**: `CMakePresets.json` (correção da T01, que está `Implementado`) e nova ADR `Docs/Decisions/0015-cmake-build-type-por-preset.md`. Nenhum símbolo de Contrato/Interface mudou.
 
 ## Bloqueio
 (vazio)
