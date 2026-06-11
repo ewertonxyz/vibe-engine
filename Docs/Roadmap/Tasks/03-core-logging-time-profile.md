@@ -3,7 +3,7 @@ id: 03
 nome: core-logging-time-profile
 fase: Fase-01-foundation
 formato: 2
-status: Planejado
+status: Implementado
 dependencies: [02]
 decisions: [0004, 0006, 0008, 0014]
 especialistas_consultados: [vx-spec-architecture, vx-spec-memory-perf, vx-spec-testing]
@@ -182,7 +182,10 @@ bootstrapped) → 6. Status Em-execução → 7. Baseline (suite [core] da T02 v
 11. Status Implementado → 12. Commit `[task 03] core: logging, time, profile`, push, PR.
 
 ## Desvios aprovados
-(vazio)
+- **LogCapture hook (aprovado pelo usuário via AskUserQuestion):** o plano de testes exige um fixture `LogCapture` que instala/remove sink de captura, mas spdlog é PRIVATE e o Contrato do `Logging.h` não expunha API de captura. Adicionado `void SetLogCaptureForTesting(void(*)(LogLevel,const char*))` guardado por `#if VIBE_TESTING` em `Logging.h` (precedente ADR 0009 / `VASSERT_SetHandlerForTesting`). Só em build de teste; nenhum símbolo de Interface para sucessoras mudou.
+- **VibeTests por glob (ADR 0016, aprovado pelo usuário):** os testes novos precisavam entrar no alvo `VibeTests` (definido em `Engine/Source/Tests/CMakeLists.txt`, fora do `files_modify` da T03). A T02 implementara lista explícita, mas a nota da T02 dizia "`Core/Tests/*.cpp`" (glob). Correção na origem: `Engine/Source/Tests/CMakeLists.txt` convertido para `file(GLOB ... CONFIGURE_DEPENDS Engine/Source/Runtime/*/Tests/*.cpp)`. Adicionado também um POST_BUILD `copy_if_different $<TARGET_RUNTIME_DLLS:VibeTests>` (a cópia applocal do vcpkg não cobria `TracyClient.dll`) e `DISCOVERY_MODE PRE_TEST` no `catch_discover_tests` (descoberta no tempo do ctest, com as DLLs já no lugar). Arquivo fora do `files_modify` tocado **com autorização explícita** (correção da T02, `Implementado`) + nova ADR 0016. Nenhum símbolo de Interface mudou.
+- **Profile.h `#if` em vez de `#ifdef` (inconsistência do doc):** o Contrato do `Profile.h` dizia incluir Tracy sob `#ifdef TRACY_ENABLE`, mas a ADR 0008 define `TRACY_ENABLE=0` em asan-debug (definido, valor 0) — `#ifdef` seria verdadeiro e tentaria incluir Tracy (não linkado em asan), violando o Critério "asan-debug linka limpo". Corrigido para `#if TRACY_ENABLE` (1→inclui, 0→pula, ausente→pula), consistente com o encoding de valor da ADR 0008 (e com `#if VIBE_BUILD_SHIPPING`). Mudança no próprio arquivo de `files_create`, sem alterar nome/comportamento de macro nem Interface.
+- **asan-debug `_DISABLE_*_ANNOTATION` (ADR 0015 adendo, aprovado pelo usuário):** `asan-debug` falhava ao linkar `VibeTests` (LNK2038 `annotate_vector/string` 1 vs 0) por misturar objs ASan com `Catch2d.lib` do vcpkg sem ASan. Adicionado `_DISABLE_STL_ANNOTATION=1` (macro mestre da STL do MSVC: string+vector+optional) aos defines do preset `asan-debug` em `CMakePresets.json` (T01, `Implementado`) **com autorização explícita**. Documentado no adendo da ADR 0015.
 
 ## Bloqueio
 (vazio)

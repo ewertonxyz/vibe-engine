@@ -82,3 +82,18 @@ autorizada explicitamente e registrada como Desvio aprovado na Task 02.
   alterar nomes de preset nem o contrato de Interface da T01 (presets, `Build/<preset>/bin`,
   defines `VIBE_*`).
 - Tasks futuras que adicionarem preset seguem esta tabela.
+
+## Adendo (Task 03) — anotações de container do ASan
+
+Ao buildar o preset `asan-debug` pela primeira vez com um alvo que linka libs do vcpkg
+(`VibeTests` → `Catch2d.lib`), surgiu LNK2038: `mismatch detected for 'annotate_vector'/'annotate_string'`
+(valor `1` nos objs compilados com `/fsanitize=address` vs `0` nas libs vcpkg sem ASan). As libs do
+vcpkg não são compiladas com ASan, então as anotações de overflow de container são incompatíveis.
+
+Decisão (usuário, execução da Task 03): adicionar `_DISABLE_STL_ANNOTATION=1` aos defines do preset
+`asan-debug` em `CMakePresets.json`. Esse é o macro mestre da STL do MSVC
+(`__msvc_sanitizer_annotate_container.hpp`) que desliga as anotações de `basic_string`, `vector` **e**
+`optional` de uma vez (os macros granulares `_DISABLE_STRING_ANNOTATION`/`_DISABLE_VECTOR_ANNOTATION`
+deixavam `annotate_optional` escapar). Isso casa o ABI dos containers com as libs não-ASan e
+desbloqueia o `asan-debug` para qualquer alvo que linke dependências do vcpkg. Edição de
+`CMakePresets.json` (T01, `Implementado`) autorizada explicitamente.
