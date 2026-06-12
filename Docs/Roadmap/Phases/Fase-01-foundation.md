@@ -266,63 +266,154 @@ class FrameTimer;     // void Tick(); Vdouble DeltaSeconds() const; Vuint64 Fram
 ```
 Consumido por: T05–T14.
 
-### T05/T06 — memory
-Expõe (`Engine/Source/Runtime/Memory/Public/`):
+### T04 — math-wrappers-glm
+Expõe (`Engine/Source/Runtime/Math/Public/`, ADR 0017):
 ```cpp
-namespace VibeEngine {
-enum class MemoryTag : Vuint16 { Core, Job, FileSystem, Frame, Debug /* fechado — ADR 0001 */ };
-class IAllocator;       // Allocate(Size, Align, Tag), Free(Ptr) — interface
-class LinearAllocator;  // : IAllocator
-class FrameAllocator;   // per-thread, Reset() por frame (ADR 0003)
+namespace VibeEngine {                       // tipos no namespace raiz (ADR 0017)
+using Vec2 = glm::vec2; using Vec3 = glm::vec3; using Vec4 = glm::vec4;
+using Mat4 = glm::mat4; using Quat = glm::quat;
+struct Transform { Vec3 m_Position; Quat m_Rotation; Vec3 m_Scale; };
+}
+namespace VibeEngine::Math {                  // operações como free functions (ADR 0017)
+inline constexpr Vfloat Epsilon = 1e-6f;
+Mat4 Identity(); Quat Normalize(const Quat&); Vfloat Length(const Quat&);
+Vec3 Lerp(const Vec3&, const Vec3&, Vfloat);  // superfície mínima MVP; cresce just-in-time
 }
 ```
-Consumido por: T09, T10, T13.
+Consumido por: fases 2+ (Renderer, Animation, Character, Camera). Não consumido dentro da Fase 1.
+
+### T05/T06 — memory
+Expõe (`Engine/Source/Runtime/Memory/Public/Memory/`, ADR 0014/0001/0003). Assinaturas refinadas
+na criação da T05 (Allocate/Free em `Vspan<Vbyte>` por HARDENING §12; LinearAllocator possui o
+backing; agregação por-tag por instância):
+```cpp
+namespace VibeEngine {
+enum class MemoryTag : Vuint16 { Core, Job, FileSystem, Frame, Debug, Count /* fechado — ADR 0001 */ };
+const char* ToString(MemoryTag) noexcept;
+class IAllocator {                            // interface multi-backend
+  virtual Vspan<Vbyte> Allocate(Vuint64 Size, Vuint64 Alignment, MemoryTag) noexcept = 0;
+  virtual void Free(Vspan<Vbyte> Block) noexcept = 0;   // span vazio = OOM/no-op
+};
+class LinearAllocator;  // : IAllocator; possui buffer (CapacityBytes ctor); Reset(); BytesAllocated(MemoryTag) — T05
+class FrameAllocator;   // : IAllocator; per-thread, possui chunks; BeginFrame(); grow+VLOG_WARN; ChunkCount() — T06
+class TrackingAllocator;// : IAllocator; wrap de IAllocator&; LiveBytes(MemoryTag)/LiveAllocationCount()/ReportLeaks(); #if VIBE_TRACKING_ALLOC — T06
+}
+```
+Consumido por: T09, T10, T13, T14 (TrackingAllocator é o mecanismo do gate zero-leak do smoke da fase).
 
 ### T07 — platform-windows-base
-Expõe (`Engine/Source/Runtime/Platform/Public/`):
+Expõe (`Engine/Source/Runtime/Platform/Public/Platform/`, ADR 0014; backend Win32 confinado a Private/Windows; sem `<windows.h>` em Public):
 ```cpp
 namespace VibeEngine {
-class PlatformFile;               // Open/Read/Close síncronos; VResult<..., PlatformError>
-class PlatformThread;             // Create(Fn, Name), SetName, SetAffinity, Join (ADR 0002)
-class PlatformPerformanceCounter; // static Vuint64 Now(); static Vuint64 Frequency()
+enum class PlatformError : Vuint8 { Unknown, NotFound, AccessDenied, InvalidArgument, IoError };
+class PlatformFile {               // RAII sobre HANDLE (void*); move-only; somente leitura no MVP
+  static VResult<PlatformFile, PlatformError> Open(const char* Path) noexcept;
+  VResult<Vuint64, PlatformError> Read(Vspan<Vbyte> Dst) noexcept;  // bytes lidos; short read = EOF
+  void Close() noexcept; bool IsOpen() const noexcept; };
+class PlatformThread {             // RAII; move-only; backend do WorkerThread (ADR 0002)
+  using EntryFn = void(*)(void*);
+  static VResult<PlatformThread, PlatformError> Create(EntryFn, void* Arg, Vspan<const char> Name) noexcept;
+  void SetName(Vspan<const char>) noexcept; void SetAffinity(Vuint32 CpuIndex) noexcept;  // affinity no-op MVP
+  void Join() noexcept; bool IsJoinable() const noexcept;
+  static Vuint32 GetPhysicalCoreCount() noexcept; };  // GetLogicalProcessorInformationEx(RelationProcessorCore) — ADR 0007/0021
+class PlatformPerformanceCounter { static Vuint64 Now() noexcept; static Vuint64 Frequency() noexcept; };
 }
 ```
-Consumido por: T08, T09, T11, T13.
+Consumido por: T08, T09 (WorkerThread usa PlatformThread), T11 (FileSystem usa PlatformFile), T13 (GetPhysicalCoreCount — ADR 0007/0021).
+
+### T08 — platform-windows-application
+Expõe (`Engine/Source/Runtime/Platform/Public/Platform/`):
+```cpp
+namespace VibeEngine {
+enum class PumpResult : Vuint8 { Continue, QuitRequested };
+class PlatformApplication {        // lifecycle headless (sem janela na Fase 1); message pump Win32 em PImpl
+  VResult<void, PlatformError> Initialize();   // idempotente
+  PumpResult PumpMessages();                    // não-bloqueante (PeekMessage); drena 1 passada
+  void RequestQuit(); void Shutdown(); bool IsInitialized() const; };
+}
+```
+Consumido por: T13, T14 (main loop do VibeGame/Editor entra na Fase 12).
 
 ### T09/T10 — jobsystem
-Expõe (`Engine/Source/Runtime/JobSystem/Public/`):
+Expõe (`Engine/Source/Runtime/JobSystem/Public/JobSystem/`, namespace raiz `VibeEngine`; alvo
+`VibeJobSystem`/alias `Vibe::JobSystem`; superfície elaborada e fronteira T09|T10 fixadas por **ADR 0018**):
 ```cpp
 namespace VibeEngine {
-struct JobHandle;                       // opaco
-class JobSystem;                        // static Schedule(Job) -> JobHandle; Job 64 B alinhado, payload inline 48 B (ADR 0002)
-class JobFence;                         // void Wait()
-void ParallelFor(Vuint32 Count, Vuint32 ChunkSize, /*callable*/ ...);
-class TaskGraph;                        // AddNode, AddDependency, Submit() -> JobFence
+// ---- T09 (worker-queue): JobHandle, JobFence, facade JobSystem ----
+struct JobHandle { Vuint32 m_Index; Vuint32 m_Generation; bool IsValid() const noexcept; }; // 8 B, POD opaco (ADR 0001/0002)
+class JobFence {                        // move-only; void Wait() noexcept (cooperativo); bool IsComplete() const noexcept
+};
+class JobSystem {                       // facade ESTÁTICO; pool global (heap frio); Job 64 B, payload inline 48 B (ADR 0002/0018)
+  static void Initialize(Vuint32 WorkerCount);   // ordem fixa via EngineCore (ADR 0006/0007)
+  static void Shutdown();  static bool IsInitialized() noexcept;  static Vuint32 WorkerCount() noexcept;
+  template <class Fn> static JobHandle Schedule(Fn&&) noexcept;        // captura ≤ 48 B (static_assert, ADR 0002)
+  template <class Fn> static void Schedule(Fn&&, JobFence&) noexcept;  // associa job à fence
+  static void Wait(JobHandle) noexcept;  static bool IsComplete(JobHandle) noexcept;
+};
+// ---- T10 (graph-parallelfor): ParallelFor, TaskGraph ----
+template <class Fn> void ParallelFor(Vuint32 Count, Vuint32 ChunkSize, Fn&& Body) noexcept; // Body por intervalo void(Begin,End); ChunkSize 0 = split estático
+class TaskGraph {                       // single-shot; storage via IAllocator& (MemoryTag::Job, ADR 0018)
+  using NodeId = Vuint32;
+  explicit TaskGraph(IAllocator&) noexcept;
+  template <class Fn> NodeId AddNode(Fn&&) noexcept;   // mesma guarda de 48 B
+  void AddDependency(NodeId Before, NodeId After) noexcept;
+  JobFence Submit() noexcept;           // agenda o grafo respeitando dependências; consome o grafo
+};
 }
 ```
+Notas de fronteira (ADR 0018): **T09** entrega `JobHandle`/`JobFence`/facade `JobSystem` (linka só
+`Vibe::Core`+`Vibe::Platform`; pool em heap frio `unique_ptr`, §12); **T10** entrega `ParallelFor`+`TaskGraph`
+(adiciona o link `Vibe::Memory` ao alvo). `JobFence` é construída por associação em T09 e reusada por T10.
 Consumido por: T12, T13, T14.
 
 ### T11/T12 — filesystem
-Expõe (`Engine/Source/Runtime/FileSystem/Public/`):
+Expõe (`Engine/Source/Runtime/FileSystem/Public/FileSystem/`, alvo `VibeFileSystem`/alias
+`Vibe::FileSystem`; superfície elaborada por **ADR 0020**; sem `<windows.h>` em Public):
 ```cpp
 namespace VibeEngine {
-class Path;             // NormalizeSlashes, Join, Extension
-class FileSystem;       // static ReadSync(Path) -> VResult<std::vector<Vbyte>, FileError>; ReadAsync(Path) -> AsyncReadRequest
-class AsyncReadRequest; // Wait(); Result() -> VResult<...>  (wrapper sobre JobFence)
-class FileWatcher;      // Watch(Path, Callback); Poll() apenas com VIBE_TESTING (ADR 0005)
+// ---- T11 (sync-path): Path, FileError, FileSystem::ReadSync ----
+enum class FileError : Vuint8 { Unknown, NotFound, AccessDenied, InvalidArgument, IoError, Cancelled };
+class Path {            // value type; ctor normaliza '\\'→'/'; Join, Extension (".gltf" c/ ponto), Str(), CStr()
+};
+class FileSystem {      // fachada estática
+  static VResult<std::vector<Vbyte>, FileError> ReadSync(const Path&);              // buffer próprio
+  static VResult<Vuint64, FileError> ReadSync(const Path&, Vspan<Vbyte> Dst);       // zero-alloc (ADR 0020); >Dst = InvalidArgument
+  static AsyncReadRequest ReadAsync(const Path&);                                    // T12; VPROFILE_ZONE("FileSystem.ReadAsync")
+};
+// ---- T12 (async-watcher): AsyncReadRequest, FileWatcher ----
+class AsyncReadRequest { // move-only; dono de unique_ptr<ReadState> (buffer+JobFence+status atômico); job captura ReadState* 8B (ADR 0002)
+  void Wait() noexcept; bool Cancel() noexcept; VResult<std::vector<Vbyte>, FileError> Result(); // dtor faz Wait() — sem UAF
+};
+using FileWatchCallback = void (*)(const Path& ChangedPath, void* UserData);        // sem std::function (§13)
+class FileWatcher {     // ReadDirectoryChangesW+OVERLAPPED em Private; Poll-unificado (ADR 0020, refina ADR 0005)
+  VResult<void, FileError> Watch(const Path& DirPath, FileWatchCallback, void* UserData);
+  void Poll();          // drena eventos e dispara callbacks na thread do chamador (incondicional — ADR 0020)
+};
 }
 ```
+Notas de fronteira (ADR 0020): **T11** entrega `Path`/`FileError`/`FileSystem::ReadSync` (linka
+`Vibe::Core`+`Vibe::Platform`); **T12** entrega `AsyncReadRequest`/`ReadAsync`/`FileWatcher` (adiciona o link
+`Vibe::JobSystem`; modifica `FileSystem.h` para `ReadAsync`). `Poll()` é incondicional (drain por frame em
+produção, drain nos testes) — **refina** o `Poll() #if VIBE_TESTING` do ADR 0005; sem thread dedicada de watcher.
 Consumido por: T13, T14.
 
 ### T13 — engine-core-bootstrap
-Expõe (`Engine/Source/Runtime/EngineCore/Public/`):
+Expõe (`Engine/Source/Runtime/EngineCore/Public/EngineCore/`, alvo `VibeEngineCore`/alias `Vibe::EngineCore`,
+módulo próprio — ADR 0012; forma `class EngineCore` fixada por **ADR 0021**):
 ```cpp
 namespace VibeEngine {
+enum class EngineError : Vuint32 { Unknown, AlreadyInitialized, InsufficientHardware, SubsystemInitFailed }; // ADR 0021
 struct EngineCoreConfig { Vuint32 m_WorkerCount{0}; Vuint64 m_FrameAllocatorSize{0}; bool m_EnableTracking{true}; }; // ADR 0006
-VResult<void, EngineError> Initialize(const EngineCoreConfig& Config); // ordem fixa; EngineError::InsufficientHardware se < 8 cores (ADR 0007)
-void Shutdown();                                                       // ordem inversa
+class EngineCore {                  // facade estático (ADR 0021); orquestra ordem fixa (ADR 0006)
+  EngineCore() = delete;
+  static VResult<void, EngineError> Initialize(const EngineCoreConfig& Config); // <8 físicos em auto → InsufficientHardware (ADR 0007)
+  static void Shutdown();           // ordem inversa; passo Memory loga "TrackingAllocator: <N> leaks" (ADR 0021)
+};
 }
 ```
+Notas (ADR 0021): linka `Vibe::Core`+`Vibe::Memory`+`Vibe::Platform`+`Vibe::JobSystem` (NÃO `Vibe::FileSystem` —
+stateless na Fase 1, passo só marcador de log). Possui system `LinearAllocator`+`TrackingAllocator` (opt-in) +
+`FrameAllocator` por worker. Cada passo de boot/teardown emite `VLOG_INFO` marcador (ordem observável nos testes).
 Consumido por: T14.
 
 ## Comandos canônicos da fase

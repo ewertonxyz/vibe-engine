@@ -34,3 +34,12 @@ relacionada: [Phases/Fase-01-foundation, Decisions/0001, Decisions/0002]
 - `TrackingAllocator` adiciona ~mutex+map por alocação em Debug/Development — inaceitável em Shipping. CI roda smoke em Development por padrão; isso pega leaks.
 - Preset `asan-debug` referenciado pelo `CMakePresets.json`. Existe em paralelo com `debug`/`development`/`shipping`.
 - Tasks subsequentes que adicionam novo subsistema devem registrar tag em `MemoryTag` (enum) — ver ADR 0001.
+
+## Adendo (Task 06) — callsite adiado no MVP
+
+Na criação da Task 06 o usuário decidiu **omitir o `callsite`** do record do `TrackingAllocator`
+no MVP: o record passa a ser `{tag, size, thread_id}`. Razão: o gate real desta ADR — relatório de
+leaks **agrupado por `MemoryTag`** no shutdown — é totalmente atendido sem callsite; capturar callsite
+exigiria superfície de API extra (`std::source_location` numa sobrecarga de `Allocate`) e/ou
+simbolização fora de escopo. O `callsite` volta quando um relatório simbolizado for efetivamente
+construído (pós-MVP). Demais decisões desta ADR permanecem.
